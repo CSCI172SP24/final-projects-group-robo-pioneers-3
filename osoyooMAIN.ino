@@ -13,12 +13,14 @@
 #define RightDirectPin2  11
 #define LeftDirectPin1  7
 #define LeftDirectPin2  8
-#define BUZZ_PIN 5
+#define BUZZ_PIN 13
+#define RightObstacleSensor 5
+#define LeftObstacleSensor 4
 
 // IR Remote Button Codes
 #define btn1 0xFFA25D
 #define btn2 0xFF62FD
-#define btn3 0xFFC23D
+#define btn3 0xFFE21D
 #define btn4 0xFF22DD
 #define btn5 0xFF02FD
 #define btn6 0xFFC23D
@@ -78,6 +80,9 @@ void setup() {
   pinMode(speedPinR, OUTPUT);
   stop_Stop();
   
+  pinMode(RightObstacleSensor, INPUT);
+  pinMode(LeftObstacleSensor, INPUT);
+
   pinMode(ECHO_PIN, INPUT);
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(RECV_PIN, INPUT);
@@ -89,18 +94,24 @@ void setup() {
 
 void loop() {
   IR_Tick();
-  if (mode == MODE_IR_DRIVE) {
-    Drive_Tick();
-  } else if (mode == MODE_OBJ_FOLLOW) {
-    doUltraFollowTick();
-  } else if (mode == MODE_OBJ_AVOID) {
-
-  } else if (mode == MODE_LINE_FOLLOW) {
-
-  } else if (mode == MODE_SPECIAL) {
-
-  } 
-  
+  switch (mode) {
+    case MODE_IR_DRIVE:
+      Drive_Tick();
+      break;
+    case MODE_OBJ_FOLLOW:
+      doUltraFollowTick();
+      break;
+    case MODE_OBJ_AVOID:
+      doAvoidTick();
+      break;
+    case MODE_LINE_FOLLOW:
+      break;
+    case MODE_SPECIAL:
+      break;
+    default:
+      break;
+  }
+    
 }
 
 // Motor control functions
@@ -175,10 +186,12 @@ void IR_Tick() {
         break;
       case btn1:
         mode = MODE_OBJ_FOLLOW;
-        doUltraFollowTick();
         break;
       case btn2:
         mode = MODE_LINE_FOLLOW;
+        break;
+      case btn3:
+        mode = MODE_OBJ_AVOID;
         break;
       default:
         break;
@@ -317,10 +330,30 @@ void buzz_OFF()  //close buzzer
   digitalWrite(BUZZ_PIN, HIGH);
   
 }
+// TODO: add buzzer pin to setup(), add buzzer button, and maybe add it to a couple other functions?
 void alarm(){
    buzz_ON();
  
    buzz_OFF();
 }
 
+void doAvoidTick(){
+  int IRvalueLeft = digitalRead(RightObstacleSensor);
+  int IRvalueRight = digitalRead(LeftObstacleSensor);
+  if (IRvalueLeft==LOW && IRvalueRight==LOW) {
+    //both sensor detected obstacle, go ahead
+    go_Advance();
+  }
+  else if (IRvalueLeft==HIGH && IRvalueRight==HIGH) {
+    stop_Stop();  //no obstacle, stop
+  }
+  else if (IRvalueLeft==LOW && IRvalueRight==HIGH) {
+    //only left sensor detect obstacle
+    go_Left();  //Turn left
+  }
+  else if (IRvalueLeft==HIGH && IRvalueRight==LOW) { 
+    //only right sensor detect obstacle
+    go_Right();  //Turn right
+  }
+}
 // TODO: move JogFlag and Time assignments to the end of their repspective movement codes to not rely on re-using it.
