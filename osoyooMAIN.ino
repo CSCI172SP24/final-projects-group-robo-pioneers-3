@@ -91,7 +91,7 @@ void setup() {
   pinMode(LEFT_SENSOR_PIN, INPUT);
   pinMode(RIGHT_SENSOR_PIN, INPUT);
 }
-
+// NOTE: IR_Tick() determines the mode, then the switch-case figures out which mode's code to execute. Mode is an integer.
 void loop() {
   IR_Tick();
   switch (mode) {
@@ -286,7 +286,7 @@ void lineFollow() {
     JogTime = 0;
   }
 }
-
+// NOTE: Get distance from ultrasonic sensor to nearest object in front of the cat's "eyes".
 float getUltraDistance() {
   float duration, distance;
   digitalWrite(TRIG_PIN, LOW);
@@ -301,6 +301,7 @@ float getUltraDistance() {
   return distance;
 }
 
+// NOTE: Figure out wether to drive forward or not. Values subject to change for distances.
 void doUltraFollowTick() {
   float currentDistance = getUltraDistance();
   Serial.println(currentDistance);
@@ -336,23 +337,23 @@ void alarm(){
  
    buzz_OFF();
 }
-
+// NOTE: Determine whether the back IR sensors readings need movement, and which direction. Then continue.
 void doAvoidTick(){
   int IRvalueLeft = digitalRead(RightObstacleSensor);
   int IRvalueRight = digitalRead(LeftObstacleSensor);
   if (IRvalueLeft==LOW && IRvalueRight==LOW) {
-    //both sensor detected obstacle, go ahead
+    //both sensors detected. go forward.
     go_Advance();
   }
   else if (IRvalueLeft==HIGH && IRvalueRight==HIGH) {
     stop_Stop();  //no obstacle, stop
   }
   else if (IRvalueLeft==LOW && IRvalueRight==HIGH) {
-    //only left sensor detect obstacle
+    //only left sensor detected an obstacle
     go_Left();  //Turn left
   }
   else if (IRvalueLeft==HIGH && IRvalueRight==LOW) { 
-    //only right sensor detect obstacle
+    //only right sensor detected an obstacle
     go_Right();  //Turn right
   }
 }
