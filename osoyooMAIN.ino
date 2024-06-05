@@ -1,9 +1,8 @@
-
 #include <IRremote.h>
 
 // Pin Definitions
-#define LEFT_SENSOR_PIN A0
-#define RIGHT_SENSOR_PIN A1
+#define LEFT_SENSOR_PIN A4
+#define RIGHT_SENSOR_PIN A0
 #define speedPinR 9
 #define speedPinL 6
 #define RECV_PIN 10
@@ -19,7 +18,7 @@
 
 // IR Remote Button Codes
 #define btn1 0xFFA25D
-#define btn2 0xFF62FD
+#define btn2 0xFF629D
 #define btn3 0xFFE21D
 #define btn4 0xFF22DD
 #define btn5 0xFF02FD
@@ -46,7 +45,7 @@
 
 int mode = MODE_IR_DRIVE;
 int t = 250;
-const int motorSpeed = 150; // Motor speed
+int motorSpeed = 150; // Motor speed
 
 IRrecv irrecv(RECV_PIN);
 decode_results results;
@@ -82,6 +81,10 @@ void setup() {
   
   pinMode(RightObstacleSensor, INPUT);
   pinMode(LeftObstacleSensor, INPUT);
+  
+  pinMode(BUZZ_PIN, OUTPUT);
+  digitalWrite(BUZZ_PIN, HIGH);
+  buzz_OFF();
 
   pinMode(ECHO_PIN, INPUT);
   pinMode(TRIG_PIN, OUTPUT);
@@ -105,8 +108,10 @@ void loop() {
       doAvoidTick();
       break;
     case MODE_LINE_FOLLOW:
+      lineFollow();
       break;
     case MODE_SPECIAL:
+      alarm();
       break;
     default:
       break;
@@ -193,6 +198,9 @@ void IR_Tick() {
       case btn3:
         mode = MODE_OBJ_AVOID;
         break;
+      case btn0:
+        mode = MODE_SPECIAL;
+        break;
       default:
         break;
     }
@@ -264,26 +272,20 @@ void lineFollow() {
 
   if (leftSensorValue > SENSOR_THRESHOLD && rightSensorValue > SENSOR_THRESHOLD) {
     // Move forward
+    Serial.println("fwd");
     go_Advance();
-    JogFlag = true;
-    JogTimeCnt = 1;
-    JogTime = millis();
   } else if (leftSensorValue < SENSOR_THRESHOLD && rightSensorValue > SENSOR_THRESHOLD) {
     // Turn right
-    go_Right();
-    JogFlag = true;
-    JogTimeCnt = 1;
-    JogTime = millis();
+    Serial.println("lft");
+    go_Left();
   } else if (leftSensorValue > SENSOR_THRESHOLD && rightSensorValue < SENSOR_THRESHOLD) {
     // Turn left
-    go_Left();
-    JogFlag = true;
-    JogTimeCnt = 1;
-    JogTime = millis();
+    Serial.println("rgt");
+    go_Right();
   } else {
     // Stop
+    Serial.println("stp"); // TODO: there are cases where all sensors are on, in which case it should inch forward.
     stop_Stop();
-    JogTime = 0;
   }
 }
 // NOTE: Get distance from ultrasonic sensor to nearest object in front of the cat's "eyes".
@@ -318,8 +320,7 @@ void doUltraFollowTick() {
 void buzz_ON()   //open buzzer
 {
   
-  for(int i=0;i<100;i++)
-  {
+  for(int i=0;i<100;i++) {
    digitalWrite(BUZZ_PIN,LOW);
    delay(2);//wait for 1ms
    digitalWrite(BUZZ_PIN,HIGH);
@@ -336,7 +337,9 @@ void alarm(){
    buzz_ON();
  
    buzz_OFF();
+   mode = MODE_IR_DRIVE;
 }
+// NOTE: Determine whether the back IR sensors readings need movement, and which direction. Then continue.
 // NOTE: Determine whether the back IR sensors readings need movement, and which direction. Then continue.
 void doAvoidTick(){
   int IRvalueLeft = digitalRead(RightObstacleSensor);
@@ -357,4 +360,6 @@ void doAvoidTick(){
     go_Right();  //Turn right
   }
 }
+
 // TODO: move JogFlag and Time assignments to the end of their repspective movement codes to not rely on re-using it.
+
